@@ -1,0 +1,557 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Simulador de Atenuación Pasiva RF</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#F4F6F3;
+    --panel:#FFFFFF;
+    --panel-2:#EDF1EC;
+    --border:#D7DFD9;
+    --text:#10241C;
+    --text-muted:#5B6B62;
+    --accent:#16A34A;
+    --accent-soft:#DCF3E3;
+    --danger:#DC2626;
+    --danger-soft:#FBE1E1;
+    --wall:#8C97A6;
+    --shadow: 0 1px 2px rgba(16,36,28,0.06);
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --bg:#0E1512;
+      --panel:#151F1A;
+      --panel-2:#1B2620;
+      --border:#2A3B32;
+      --text:#E7EDE9;
+      --text-muted:#8FA396;
+      --accent:#4ADE80;
+      --accent-soft:#173323;
+      --danger:#FB7185;
+      --danger-soft:#3A1620;
+      --wall:#586472;
+      --shadow: 0 1px 3px rgba(0,0,0,0.4);
+    }
+  }
+  :root[data-theme="dark"]{
+    --bg:#0E1512;
+    --panel:#151F1A;
+    --panel-2:#1B2620;
+    --border:#2A3B32;
+    --text:#E7EDE9;
+    --text-muted:#8FA396;
+    --accent:#4ADE80;
+    --accent-soft:#173323;
+    --danger:#FB7185;
+    --danger-soft:#3A1620;
+    --wall:#586472;
+    --shadow: 0 1px 3px rgba(0,0,0,0.4);
+  }
+
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:var(--bg);
+    color:var(--text);
+    font-family:'Space Grotesk', system-ui, -apple-system, sans-serif;
+    min-height:100vh;
+    padding:32px 20px 60px;
+  }
+  .wrap{max-width:1160px;margin:0 auto;}
+
+  .top{
+    display:flex;
+    flex-wrap:wrap;
+    justify-content:space-between;
+    align-items:flex-end;
+    gap:16px;
+    margin-bottom:28px;
+    border-bottom:1px solid var(--border);
+    padding-bottom:20px;
+  }
+  h1{
+    font-size:28px;
+    font-weight:700;
+    margin:0 0 6px;
+    letter-spacing:-0.01em;
+  }
+  .top p{
+    margin:0;
+    max-width:560px;
+    color:var(--text-muted);
+    font-size:14.5px;
+    line-height:1.5;
+  }
+  .badge{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:12.5px;
+    color:var(--text-muted);
+    border:1px solid var(--border);
+    border-radius:6px;
+    padding:6px 10px;
+    white-space:nowrap;
+  }
+
+  .grid{
+    display:grid;
+    grid-template-columns: 300px 1fr 300px;
+    gap:20px;
+  }
+  @media (max-width: 980px){
+    .grid{grid-template-columns:1fr;}
+  }
+
+  .panel{
+    background:var(--panel);
+    border:1px solid var(--border);
+    border-radius:12px;
+    padding:20px;
+    box-shadow:var(--shadow);
+  }
+  .panel + .panel{margin-top:20px;}
+  .panel h2{
+    font-size:13px;
+    font-weight:600;
+    text-transform:none;
+    margin:0 0 16px;
+    color:var(--text-muted);
+    letter-spacing:0.01em;
+  }
+
+  /* Frequency tabs */
+  .freqlist{display:flex;flex-direction:column;gap:8px;}
+  .freq-btn{
+    display:flex;
+    justify-content:space-between;
+    align-items:baseline;
+    width:100%;
+    text-align:left;
+    background:var(--panel-2);
+    border:1px solid var(--border);
+    border-radius:8px;
+    padding:10px 12px;
+    color:var(--text);
+    cursor:pointer;
+    font-family:inherit;
+    font-size:13.5px;
+    transition:border-color .15s ease, background .15s ease;
+  }
+  .freq-btn span.mhz{
+    font-family:'IBM Plex Mono', monospace;
+    color:var(--text-muted);
+    font-size:12px;
+  }
+  .freq-btn.active{
+    border-color:var(--accent);
+    background:var(--accent-soft);
+  }
+  .freq-btn.active span.mhz{color:var(--accent);}
+
+  /* Material cards */
+  .matlist{display:flex;flex-direction:column;gap:8px;margin-bottom:18px;}
+  .mat-btn{
+    display:block;
+    width:100%;
+    text-align:left;
+    background:var(--panel-2);
+    border:1px solid var(--border);
+    border-radius:8px;
+    padding:10px 12px;
+    color:var(--text);
+    cursor:pointer;
+    font-family:inherit;
+    font-size:13.5px;
+    transition:border-color .15s ease, background .15s ease;
+  }
+  .mat-btn small{display:block;color:var(--text-muted);font-size:11.5px;margin-top:2px;}
+  .mat-btn.active{border-color:var(--accent);background:var(--accent-soft);}
+
+  label.field-label{
+    display:flex;
+    justify-content:space-between;
+    font-size:13px;
+    color:var(--text-muted);
+    margin-bottom:8px;
+  }
+  label.field-label .val{
+    font-family:'IBM Plex Mono', monospace;
+    color:var(--text);
+    font-weight:600;
+  }
+  input[type=range]{
+    width:100%;
+    accent-color: var(--accent);
+    margin-bottom:18px;
+  }
+
+  /* Diagram */
+  .diagram-wrap{display:flex;flex-direction:column;align-items:center;}
+  svg#scene{width:100%;height:auto;display:block;}
+  .status-row{
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    gap:10px;
+    margin-top:14px;
+    padding:10px 16px;
+    border-radius:8px;
+    font-family:'IBM Plex Mono', monospace;
+    font-size:13.5px;
+    font-weight:600;
+  }
+  .status-ok{background:var(--accent-soft);color:var(--accent);}
+  .status-bad{background:var(--danger-soft);color:var(--danger);}
+  .dot{width:8px;height:8px;border-radius:50%;background:currentColor;}
+
+  /* Readout */
+  .readout dl{margin:0;}
+  .readrow{
+    display:flex;
+    justify-content:space-between;
+    align-items:baseline;
+    padding:10px 0;
+    border-bottom:1px dashed var(--border);
+    font-size:13.5px;
+  }
+  .readrow:last-child{border-bottom:none;}
+  .readrow .k{color:var(--text-muted);}
+  .readrow .v{
+    font-family:'IBM Plex Mono', monospace;
+    font-weight:600;
+    text-align:right;
+  }
+
+  .gauge{
+    margin-top:6px;
+    height:10px;
+    border-radius:6px;
+    background:var(--panel-2);
+    border:1px solid var(--border);
+    overflow:hidden;
+    position:relative;
+  }
+  .gauge-fill{
+    position:absolute;top:0;left:0;height:100%;
+    background:var(--accent);
+    transition:width .25s ease, background .25s ease;
+  }
+  .gauge-fill.bad{background:var(--danger);}
+  .gauge-labels{
+    display:flex;justify-content:space-between;
+    font-size:11px;color:var(--text-muted);
+    font-family:'IBM Plex Mono', monospace;
+    margin-top:4px;
+  }
+
+  /* Chart */
+  .chart{margin-top:26px;}
+  .chart-row{
+    display:grid;
+    grid-template-columns: 92px 1fr 70px;
+    align-items:center;
+    gap:10px;
+    margin-bottom:10px;
+  }
+  .chart-row .label{font-size:12.5px;color:var(--text-muted);}
+  .bar-track{
+    height:16px;background:var(--panel-2);border-radius:4px;overflow:hidden;border:1px solid var(--border);
+  }
+  .bar-fill{height:100%;background:var(--accent);border-radius:4px 0 0 4px;transition:width .3s ease;}
+  .bar-fill.current{background:var(--text);}
+  .chart-row .value{font-family:'IBM Plex Mono', monospace;font-size:12px;text-align:right;color:var(--text);}
+
+  .footnote{
+    margin-top:18px;
+    font-size:12px;
+    color:var(--text-muted);
+    line-height:1.5;
+    border-top:1px solid var(--border);
+    padding-top:14px;
+  }
+
+  .analysis{
+    font-size:13.5px;
+    line-height:1.6;
+    color:var(--text);
+  }
+  .analysis b{color:var(--accent);}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="top">
+    <div>
+      <h1>Simulador de atenuación pasiva de señal</h1>
+      <p>Modelo conceptual de blindaje de RF en infraestructura penitenciaria. Ajusta la tecnología, el material y el grosor del muro para observar cómo cae la potencia recibida frente al umbral de comunicación (−95 dBm), sin recurrir a interferencia activa.</p>
+    </div>
+    <div class="badge">FSPL + pérdida por material · control pasivo</div>
+  </div>
+
+  <div class="grid">
+
+    <!-- LEFT: controls -->
+    <div>
+      <div class="panel">
+        <h2>Tecnología / frecuencia</h2>
+        <div class="freqlist" id="freqList"></div>
+      </div>
+
+      <div class="panel">
+        <h2>Material del muro</h2>
+        <div class="matlist" id="matList"></div>
+
+        <label class="field-label" for="thickness">Grosor del muro <span class="val" id="thickVal">30 cm</span></label>
+        <input type="range" id="thickness" min="10" max="100" step="5" value="30">
+
+        <label class="field-label" for="distance">Distancia a la antena <span class="val" id="distVal">300 m</span></label>
+        <input type="range" id="distance" min="50" max="2000" step="10" value="300">
+      </div>
+    </div>
+
+    <!-- CENTER: diagram -->
+    <div>
+      <div class="panel">
+        <h2>Corte transversal</h2>
+        <div class="diagram-wrap">
+          <svg id="scene" viewBox="0 0 640 220" xmlns="http://www.w3.org/2000/svg"></svg>
+          <div class="status-row" id="statusRow"><span class="dot"></span><span id="statusText"></span></div>
+        </div>
+      </div>
+
+      <div class="panel chart">
+        <h2>Pérdida por material a este grosor, por tecnología</h2>
+        <div id="chartRows"></div>
+      </div>
+    </div>
+
+    <!-- RIGHT: readout -->
+    <div>
+      <div class="panel readout">
+        <h2>Lectura del sistema</h2>
+        <div class="readrow"><span class="k">Longitud de onda (λ)</span><span class="v" id="rLambda"></span></div>
+        <div class="readrow"><span class="k">FSPL (espacio libre)</span><span class="v" id="rFspl"></span></div>
+        <div class="readrow"><span class="k">Señal en el exterior del muro</span><span class="v" id="rWall"></span></div>
+        <div class="readrow"><span class="k">Pérdida por material</span><span class="v" id="rMatLoss"></span></div>
+        <div class="readrow"><span class="k">Señal en el interior</span><span class="v" id="rInside"></span></div>
+
+        <div style="margin-top:14px;">
+          <div class="gauge"><div class="gauge-fill" id="gaugeFill"></div></div>
+          <div class="gauge-labels"><span>−120 dBm</span><span>umbral −95 dBm</span><span>−40 dBm</span></div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <h2>Lectura de ingeniería</h2>
+        <div class="analysis" id="analysisText"></div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="footnote">
+    Coeficientes de absorción por material y frecuencia son estimaciones ilustrativas con fines pedagógicos (orden de magnitud consistente con literatura de pérdida de penetración en edificaciones). Para el informe técnico, respáldalos con mediciones propias o referencias normativas (ITU-R P.2109, ITU-R P.1238) y documenta el método de cálculo. EIRP de la antena de referencia: 43 dBm.
+  </div>
+
+</div>
+
+<script>
+(function(){
+  const C = 3e8;
+  const EIRP = 43; // dBm, referencia de antena macro celda
+  const THRESHOLD = -95; // dBm
+
+  const FREQS = [
+    { id:'2g',  label:'2G',            mhz:850,   note:'λ larga, alta difracción' },
+    { id:'3g',  label:'3G',            mhz:1900,  note:'propagación moderada' },
+    { id:'4g',  label:'4G',            mhz:2100,  note:'degradación lineal marcada' },
+    { id:'5gs', label:'5G Sub-6',      mhz:3500,  note:'atenuación elevada' },
+    { id:'5gm', label:'5G mmWave',     mhz:28000, note:'bloqueo casi total' },
+  ];
+
+  // dB por metro, por material y por frecuencia (mismo orden que FREQS)
+  const MATERIALS = [
+    { id:'concreto', label:'Concreto reforzado', note:'malla de varilla estructural', coef:{ '2g':12, '3g':18, '4g':20, '5gs':28, '5gm':60 } },
+    { id:'ladrillo',  label:'Ladrillo',           note:'mampostería estándar',        coef:{ '2g':6,  '3g':9,  '4g':10, '5gs':14, '5gm':35 } },
+    { id:'malla',     label:'Malla de acero',     note:'jaula de Faraday',            coef:{ '2g':20, '3g':30, '4g':32, '5gs':40, '5gm':80 } },
+  ];
+
+  let state = {
+    freq: '4g',
+    material: 'concreto',
+    thickness: 30, // cm
+    distance: 300, // m
+  };
+
+  const freqList = document.getElementById('freqList');
+  const matList = document.getElementById('matList');
+
+  FREQS.forEach(f=>{
+    const btn = document.createElement('button');
+    btn.className = 'freq-btn';
+    btn.dataset.id = f.id;
+    btn.innerHTML = `<span>${f.label}</span><span class="mhz">${f.mhz>=1000?(f.mhz/1000)+' GHz':f.mhz+' MHz'}</span>`;
+    btn.addEventListener('click', ()=>{ state.freq=f.id; render(); });
+    freqList.appendChild(btn);
+  });
+
+  MATERIALS.forEach(m=>{
+    const btn = document.createElement('button');
+    btn.className = 'mat-btn';
+    btn.dataset.id = m.id;
+    btn.innerHTML = `${m.label}<small>${m.note}</small>`;
+    btn.addEventListener('click', ()=>{ state.material=m.id; render(); });
+    matList.appendChild(btn);
+  });
+
+  const thicknessInput = document.getElementById('thickness');
+  const distanceInput = document.getElementById('distance');
+  thicknessInput.addEventListener('input', e=>{ state.thickness = +e.target.value; render(); });
+  distanceInput.addEventListener('input', e=>{ state.distance = +e.target.value; render(); });
+
+  function fspl(distanceM, mhz){
+    const distKm = distanceM/1000;
+    return 20*Math.log10(distKm) + 20*Math.log10(mhz) + 32.44;
+  }
+
+  function computeFor(freqId, materialId, thicknessCm, distanceM){
+    const f = FREQS.find(x=>x.id===freqId);
+    const m = MATERIALS.find(x=>x.id===materialId);
+    const lambda = C / (f.mhz*1e6); // metros
+    const loss = fspl(distanceM, f.mhz);
+    const atWall = EIRP - loss;
+    const matLoss = m.coef[freqId] * (thicknessCm/100);
+    const inside = atWall - matLoss;
+    return { f, m, lambda, loss, atWall, matLoss, inside };
+  }
+
+  function fmtHz(mhz){
+    return mhz>=1000 ? (mhz/1000)+' GHz' : mhz+' MHz';
+  }
+
+  function drawScene(res, thicknessCm){
+    const svg = document.getElementById('scene');
+    const wallW = 20 + (thicknessCm/100)*70; // px, escala visual
+    const wallX = 300 - wallW/2;
+    const blocked = res.inside < THRESHOLD;
+    const accent = blocked ? 'var(--danger)' : 'var(--accent)';
+
+    // amplitud de onda proporcional a señal recibida, normalizada
+    const ampOutside = 24;
+    const ratioInside = Math.max(0, Math.min(1, (res.inside + 120) / 80));
+    const ampInside = 3 + ratioInside*21;
+
+    function wavePath(xStart, xEnd, amp, y, cycles){
+      let d = `M ${xStart} ${y}`;
+      const steps = 60;
+      for(let i=1;i<=steps;i++){
+        const t = i/steps;
+        const x = xStart + (xEnd-xStart)*t;
+        const y2 = y + Math.sin(t*Math.PI*2*cycles)*amp;
+        d += ` L ${x.toFixed(1)} ${y2.toFixed(1)}`;
+      }
+      return d;
+    }
+
+    svg.innerHTML = `
+      <!-- torre -->
+      <g>
+        <line x1="40" y1="180" x2="40" y2="60" stroke="var(--wall)" stroke-width="4"/>
+        <path d="M 25 60 L 40 40 L 55 60 Z" fill="var(--wall)"/>
+        <line x1="40" y1="180" x2="40" y2="190" stroke="var(--wall)" stroke-width="6"/>
+      </g>
+
+      <!-- onda exterior -->
+      <path d="${wavePath(60, wallX-6, ampOutside, 110, 3)}" stroke="var(--accent)" stroke-width="2.5" fill="none" opacity="0.85"/>
+
+      <!-- muro -->
+      <rect x="${wallX}" y="40" width="${wallW}" height="150" fill="var(--wall)" opacity="0.9" rx="3"/>
+      <text x="${300}" y="205" text-anchor="middle" font-size="11" fill="var(--text-muted)" font-family="IBM Plex Mono, monospace">${res.m.label} · ${thicknessCm} cm</text>
+
+      <!-- onda interior -->
+      <path d="${wavePath(wallX+wallW+6, 560, ampInside, 110, 3)}" stroke="${accent}" stroke-width="2.5" fill="none" opacity="0.9"/>
+
+      <!-- celda / receptor -->
+      <g>
+        <rect x="565" y="95" width="30" height="30" rx="5" fill="none" stroke="${accent}" stroke-width="2.5"/>
+        <circle cx="580" cy="110" r="4" fill="${accent}"/>
+      </g>
+      <text x="580" y="145" text-anchor="middle" font-size="11" fill="var(--text-muted)" font-family="IBM Plex Mono, monospace">interior</text>
+    `;
+  }
+
+  function render(){
+    document.querySelectorAll('.freq-btn').forEach(b=> b.classList.toggle('active', b.dataset.id===state.freq));
+    document.querySelectorAll('.mat-btn').forEach(b=> b.classList.toggle('active', b.dataset.id===state.material));
+    document.getElementById('thickVal').textContent = state.thickness+' cm';
+    document.getElementById('distVal').textContent = state.distance+' m';
+
+    const res = computeFor(state.freq, state.material, state.thickness, state.distance);
+
+    document.getElementById('rLambda').textContent = (res.lambda*100).toFixed(2)+' cm';
+    document.getElementById('rFspl').textContent = res.loss.toFixed(1)+' dB';
+    document.getElementById('rWall').textContent = res.atWall.toFixed(1)+' dBm';
+    document.getElementById('rMatLoss').textContent = '−'+res.matLoss.toFixed(1)+' dB';
+    document.getElementById('rInside').textContent = res.inside.toFixed(1)+' dBm';
+
+    const blocked = res.inside < THRESHOLD;
+    const statusRow = document.getElementById('statusRow');
+    statusRow.className = 'status-row ' + (blocked?'status-bad':'status-ok');
+    document.getElementById('statusText').textContent = blocked
+      ? 'Señal por debajo del umbral — comunicación bloqueada'
+      : 'Señal por encima del umbral — comunicación posible';
+
+    const gaugeFill = document.getElementById('gaugeFill');
+    const pct = Math.max(0, Math.min(100, ((res.inside + 120) / 80) * 100));
+    gaugeFill.style.width = pct+'%';
+    gaugeFill.className = 'gauge-fill '+(blocked?'bad':'');
+
+    drawScene(res, state.thickness);
+
+    // chart: pérdida de material por frecuencia con material y grosor actuales
+    const chartRows = document.getElementById('chartRows');
+    chartRows.innerHTML = '';
+    const m = MATERIALS.find(x=>x.id===state.material);
+    const maxLoss = Math.max(...FREQS.map(f=> m.coef[f.id]*(state.thickness/100)));
+    FREQS.forEach(f=>{
+      const loss = m.coef[f.id]*(state.thickness/100);
+      const pctBar = (loss/maxLoss)*100;
+      const row = document.createElement('div');
+      row.className = 'chart-row';
+      row.innerHTML = `
+        <div class="label">${f.label} <span style="opacity:.6">(${fmtHz(f.mhz)})</span></div>
+        <div class="bar-track"><div class="bar-fill ${f.id===state.freq?'current':''}" style="width:${pctBar}%"></div></div>
+        <div class="value">${loss.toFixed(1)} dB</div>
+      `;
+      chartRows.appendChild(row);
+    });
+
+    document.getElementById('analysisText').innerHTML = analysisFor(res, state);
+  }
+
+  function analysisFor(res, st){
+    const f = res.f, m = res.m;
+    let note;
+    if(f.mhz <= 2100){
+      note = `Con <b>${fmtHz(f.mhz)}</b>, la longitud de onda es relativamente larga (${(res.lambda*100).toFixed(1)} cm), por lo que la señal difracta con facilidad alrededor de obstáculos. Llevarla bajo el umbral de −95 dBm exige un muro grueso y/o un material con alto coeficiente de absorción — el diseño de blindaje aquí es responsabilidad casi exclusiva de la arquitectura del edificio.`;
+    } else if(f.mhz < 6000){
+      note = `En <b>${fmtHz(f.mhz)}</b> la atenuación por materiales convencionales ya es considerable; un muro de concreto de espesor moderado reduce significativamente la señal, aunque todavía puede requerir refuerzo (malla de acero) para garantizar el bloqueo bajo −95 dBm en escenarios de distancia corta a la antena.`;
+    } else {
+      note = `Las ondas milimétricas de <b>${fmtHz(f.mhz)}</b> tienen una longitud de onda de apenas ${(res.lambda*1000).toFixed(1)} mm: prácticamente cualquier material constructivo básico las bloquea. El confinamiento pasivo es casi automático, lo que hace innecesaria cualquier forma de interferencia activa para esta banda.`;
+    }
+    const verdict = res.inside < THRESHOLD
+      ? `Con ${m.label.toLowerCase()} a ${st.thickness} cm, la señal cae a ${res.inside.toFixed(1)} dBm — por debajo del umbral de comunicación.`
+      : `Con ${m.label.toLowerCase()} a ${st.thickness} cm, la señal se mantiene en ${res.inside.toFixed(1)} dBm — todavía por encima del umbral. Aumenta el grosor o cambia de material para reforzar el confinamiento.`;
+    return note + '<br><br>' + verdict;
+  }
+
+  render();
+})();
+</script>
+</body>
+</html>
